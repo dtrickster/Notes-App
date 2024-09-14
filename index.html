@@ -82,6 +82,14 @@
             display: block;
             cursor: crosshair;
             background-color: #fff;
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+        }
+        .canvas-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
         }
         .top-right-buttons {
             position: absolute;
@@ -123,8 +131,11 @@
         <div contenteditable="true" id="note-input"></div>
         <button onclick="addNote()">Add Note</button>
 
-        <canvas id="canvas" width="500" height="400"></canvas>
-        <button onclick="clearCanvas()">Eraser</button>
+        <canvas id="canvas"></canvas>
+        <div class="canvas-buttons">
+            <button onclick="setMode('pen')">Pen</button>
+            <button onclick="setMode('eraser')">Eraser</button>
+        </div>
         <button onclick="saveScribble()">Save Scribble as Note</button>
     </div>
     <div id="notes"></div>
@@ -200,12 +211,17 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let drawing = false;
+        let currentMode = 'pen';
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchmove', draw);
 
         function startDrawing(e) {
+            e.preventDefault();
             drawing = true;
             draw(e);
         }
@@ -218,15 +234,22 @@
         function draw(e) {
             if (!drawing) return;
 
-            ctx.lineWidth = 2;
+            ctx.lineWidth = currentMode === 'pen' ? 2 : 10;
             ctx.lineCap = 'round';
-            ctx.strokeStyle = '#333';
+            ctx.strokeStyle = currentMode === 'pen' ? '#333' : '#fff';
 
             const rect = canvas.getBoundingClientRect();
-            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            ctx.lineTo(clientX - rect.left, clientY - rect.top);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.moveTo(clientX - rect.left, clientY - rect.top);
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
         }
 
         function saveScribble() {
