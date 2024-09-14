@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        h1 {
+            text-align: center;
+        }
+        #note-form {
+            display: flex;
+            flex-direction: column;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #note-input {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 100px;
+            margin-bottom: 10px;
+        }
+        button, .format-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #5c6bc0;
+            color: white;
+            cursor: pointer;
+            margin-right: 5px;
+            margin-bottom: 10px;
+        }
+        button:hover, .format-btn:hover {
+            background-color: #3f51b5;
+        }
+        .note {
+            background-color: white;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .note p {
+            margin: 0;
+        }
+        .timestamp {
+            font-size: 0.8em;
+            color: #777;
+        }
+        .note button {
+            background-color: #e57373;
+            margin-top: 5px;
+            width: 100%;
+        }
+        .note button:hover {
+            background-color: #f44336;
+        }
+        #format-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        #canvas {
+            border: 1px solid #ddd;
+            margin: 20px auto;
+            display: block;
+            cursor: crosshair;
+        }
+        #toggle-mode {
+            margin: 0 auto;
+            display: block;
+            padding: 10px;
+            background-color: #444;
+            color: white;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        #toggle-mode:hover {
+            background-color: #333;
+        }
+        .dark-mode {
+            background-color: #333;
+            color: #f4f4f9;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Notes App</h1>
+    <button id="toggle-mode" onclick="toggleMode()">Toggle Light/Dark Mode</button>
+    <div id="note-form">
+        <div id="format-buttons">
+            <button class="format-btn" onclick="formatText('bold')"><strong>B</strong></button>
+            <button class="format-btn" onclick="formatText('italic')"><em>I</em></button>
+            <button class="format-btn" onclick="formatText('underline')"><u>U</u></button>
+        </div>
+        <div contenteditable="true" id="note-input"></div>
+        <button onclick="addNote()">Add Note</button>
+        <button onclick="saveScribble()">Save Scribble as Note</button>
+    </div>
+    <div id="notes"></div>
+
+    <canvas id="canvas" width="500" height="400"></canvas>
+
+    <script>
+        function formatText(command) {
+            document.execCommand(command, false, null);
+        }
+
+        function addNote() {
+            const noteInput = document.getElementById('note-input');
+            const noteText = noteInput.innerHTML.trim();
+            if (noteText === "") return;
+
+            const timestamp = new Date().toLocaleString();
+            displayNote(noteText, timestamp);
+
+            noteInput.innerHTML = '';
+            saveNotes();
+        }
+
+        function displayNote(text, timestamp) {
+            const note = document.createElement('div');
+            note.className = 'note';
+
+            const noteContent = document.createElement('p');
+            noteContent.innerHTML = text;
+
+            const noteTimestamp = document.createElement('p');
+            noteTimestamp.className = 'timestamp';
+            noteTimestamp.textContent = `Created on: ${timestamp}`;
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.onclick = function() {
+                note.remove();
+                saveNotes();
+            };
+
+            note.appendChild(noteContent);
+            note.appendChild(noteTimestamp);
+            note.appendChild(deleteButton);
+
+            document.getElementById('notes').appendChild(note);
+        }
+
+        function saveNotes() {
+            const notes = Array.from(document.querySelectorAll('.note')).map(note => ({
+                text: note.querySelector('p').innerHTML,
+                timestamp: note.querySelector('.timestamp').textContent.replace('Created on: ', '')
+            }));
+            localStorage.setItem('notes', JSON.stringify(notes));
+        }
+
+        function loadNotes() {
+            const savedNotes = JSON.parse(localStorage.getItem('notes'));
+            if (!savedNotes) return;
+
+            for (const note of savedNotes) {
+                displayNote(note.text, note.timestamp);
+            }
+        }
+
+        function toggleMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        window.onload = loadNotes;
+
+        // Scribble Board
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+
+        function startDrawing(e) {
+            drawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            drawing = false;
+            ctx.beginPath();
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#333';
+
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function saveScribble() {
+            const dataURL = canvas.toDataURL();
+            const timestamp = new Date().toLocaleString();
+            const imageHtml = `<img src="${dataURL}" style="max-width: 100%;">`;
+            displayNote(imageHtml, timestamp);
+            saveNotes();
+        }
+    </script>
+
+</body>
+</html>
