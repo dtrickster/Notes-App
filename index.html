@@ -133,8 +133,7 @@
 
         <canvas id="canvas"></canvas>
         <div class="canvas-buttons">
-            <button onclick="setMode('pen')">Pen</button>
-            <button onclick="setMode('eraser')">Eraser</button>
+            <button onclick="clearCanvas()">Eraser</button>
         </div>
         <button onclick="saveScribble()">Save Scribble as Note</button>
     </div>
@@ -211,7 +210,6 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let drawing = false;
-        let currentMode = 'pen';
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
@@ -234,9 +232,9 @@
         function draw(e) {
             if (!drawing) return;
 
-            ctx.lineWidth = currentMode === 'pen' ? 2 : 10;
+            ctx.lineWidth = 2;
             ctx.lineCap = 'round';
-            ctx.strokeStyle = currentMode === 'pen' ? '#333' : '#fff';
+            ctx.strokeStyle = '#333';
 
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -248,8 +246,8 @@
             ctx.moveTo(clientX - rect.left, clientY - rect.top);
         }
 
-        function setMode(mode) {
-            currentMode = mode;
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         function saveScribble() {
@@ -258,10 +256,6 @@
             const imageHtml = `<img src="${dataURL}" style="max-width: 100%;">`;
             displayNote(imageHtml, timestamp);
             saveNotes();
-        }
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         function exportToWord() {
