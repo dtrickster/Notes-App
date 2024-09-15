@@ -85,7 +85,6 @@
             width: 100%;
             max-width: 500px;
             height: 300px;
-            touch-action: none;
         }
         .canvas-buttons {
             display: flex;
@@ -205,12 +204,23 @@
             document.body.classList.toggle('dark-mode');
         }
 
-        window.onload = loadNotes;
+        window.onload = function() {
+            loadNotes();
+            resizeCanvas();
+        };
+
+        window.onresize = resizeCanvas;
 
         // Scribble Board
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let drawing = false;
+
+        function resizeCanvas() {
+            const width = Math.min(window.innerWidth - 40, 500);
+            canvas.width = width;
+            canvas.height = 300;
+        }
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mouseup', stopDrawing);
@@ -252,7 +262,7 @@
         }
 
         function saveScribble() {
-            const dataURL = canvas.toDataURL('image/jpeg', 1.0);
+            const dataURL = canvas.toDataURL();
             const timestamp = new Date().toLocaleString();
             const imageHtml = `<img src="${dataURL}" style="max-width: 100%;">`;
             displayNote(imageHtml, timestamp);
@@ -260,19 +270,30 @@
         }
 
         function exportToWord() {
-            const doc = new window.jsPDF();
-            const notes = document.querySelectorAll('.note');
-            notes.forEach((note, index) => {
-                const text = note.querySelector('p').textContent;
-                const timestamp = note.querySelector('.timestamp').textContent;
-                doc.text(`Note ${index + 1}`, 10, 10 + index * 10);
-                doc.text(text, 10, 20 + index * 10);
-                const img = note.querySelector('img');
-                if (img) {
-                    doc.addImage(img.src, 'JPEG', 10, 30 + index * 20, 50, 50);
-                }
+            const notes = Array.from(document.querySelectorAll('.note')).map(note => ({
+                text: note.querySelector('p').textContent,
+                timestamp: note.querySelector('.timestamp').textContent,
+                isScribble: note.querySelector('img') !== null
+            }));
+
+            let content = 'My Notes Diary\n\n';
+            notes.forEach(note => {
+                content += `${note.timestamp}\n${note.text}\n\n`;
             });
-            doc.save('notes.pdf');
+
+            const blob = new Blob([content], {
+                type: 'application/msword'
+            });
+
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.createElement("a");
+            document.body.appendChild(downloadLink);
+
+            downloadLink.href = url;
+            downloadLink.download = 'notes.doc';
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
         }
 
         async function syncNotes() {
@@ -323,8 +344,6 @@
             return null;
         }
     </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </body>
 </html>
